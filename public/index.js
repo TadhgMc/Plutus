@@ -144,6 +144,8 @@ function sendTransaction(isAdding) {
   });
 }
 
+//need to add code to save to local indexdb here?
+
 document.querySelector("#add-btn").onclick = function() {
   sendTransaction(true);
 };
