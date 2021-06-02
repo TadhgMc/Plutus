@@ -2,12 +2,11 @@ const FILES_TO_CACHE = [
     '/',
     '/styles.css',
     '/index.html',
-    // '/dist/manifest.json',
-    // '/dist/bundle.js',
     '/index.js',
     '/icons/icon-192x192.png',
     '/icons/icon-512x512.png',
-    '/manifest.webmanifest'
+    '/manifest.webmanifest',
+    '/db.js'
   ];
   
 const STATIC_CACHE = "finance-static-cache";
@@ -46,66 +45,34 @@ self.addEventListener("activate", event => {
 });
   
   
-self.addEventListener("fetch", event => {
-  event.respondWith(
-    caches.match(event.request).then(cachedResponse => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
+self.addEventListener("fetch", evt => {
+  if (evt.request.url.includes("/api/")) {
+    evt.respondWith(
+      caches.open(RUNTIME_CACHE).then(cache => {
+        return fetch(evt.request)
+          .then(response => {
+            // If the response was good, clone it and store it in the cache.
+            if (response.status === 200) {
+              cache.put(evt.request.url, response.clone());
+            }
 
-      // request is not in cache. make network request and cache the response
-      return caches.open(RUNTIME_CACHE).then(cache => {
-        return fetch(event.request).then(response => {
-          return cache.put(event.request, response.clone()).then(() => {
             return response;
+          })
+          .catch(err => {
+            // Network request failed, try to get it from the cache.
+            return cache.match(evt.request);
           });
-        });
+      }).catch(err => console.log(err))
+    );
+
+    return;
+  }
+
+  evt.respondWith(
+    caches.open(STATIC_CACHE).then(cache => {
+      return cache.match(evt.request).then(response => {
+        return response || fetch(evt.request);
       });
     })
   );
 });
-
-
-// handle runtime GET requests for data from /api routes
-
-// make network request and fallback to cache if network request fails (offline)
-// event.respondWith(
-//   caches.open(RUNTIME_CACHE).then(cache => {
-//     return fetch(event.request)
-//       .then(response => {
-//         if (response.status === 200) {
-//           cache.put(evt.request.url, response.clone());
-//         };
-        
-//         return response;
-//       })
-//       .catch(() => caches.match(event.request));
-//   })
-
-// event.respondWith(
-//   caches.open(RUNTIME_CACHE).then(cache => {
-//       return cache.match(event.request).then(response => {
-//       return response || fetch(event.request);
-//       });
-//   })
-// )
-
-
-// use cache first for all other requests for performance
-// event.respondWith(
-//   caches.match(event.request).then(cachedResponse => {
-//     if (cachedResponse) {
-//       return cachedResponse;
-//     }
-
-//     // request is not in cache. make network request and cache the response
-//     return caches.open(RUNTIME_CACHE).then(cache => {
-//       return fetch(event.request).then(response => {
-//         return cache.put(event.request, response.clone()).then(() => {
-//           return response;
-//         });
-//       });
-//     });
-//   })
-// );
-
